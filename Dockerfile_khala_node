@@ -1,0 +1,48 @@
+FROM ubuntu:20.04 AS builder
+LABEL maintainer="idea_wj@163.com"
+LABEL description="This is the compilation environment of Khala, which is convenient for you to use."
+
+WORKDIR /data
+
+ENV DEBIAN_FRONTEND='noninteractive'
+ENV RUST_TOOLCHAIN='nightly-2022-07-11'
+ENV RUSTUP_HOME=/rust/.rustup
+ENV CARGO_HOME=/rust/.cargo
+ENV RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
+ENV RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static
+ENV PATH=$CARGO_HOME/bin:$PATH
+
+RUN sed -i "s/archive.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list
+
+RUN apt-get update && \
+    apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
+    apt-get install -y apt-utils apt-transport-https software-properties-common readline-common curl vim wget gnupg gnupg2 gnupg-agent ca-certificates cmake pkg-config libssl-dev git build-essential llvm clang libclang-dev tini
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain="${RUST_TOOLCHAIN}" && \
+    /rust/.cargo/bin/rustup target add wasm32-unknown-unknown --toolchain "${RUST_TOOLCHAIN}"
+
+# clean cache
+RUN	apt-get autoremove -y && \
+	apt-get clean && \
+	find /var/lib/apt/lists/ -type f -not -name lock -delete
+
+
+# use for run exec
+ENV RUST_LOG="info"
+ENV NODE_NAME="khala-node"
+ENV NODE_ROLE=""
+
+ENV PARACHAIN="khala"
+ENV RELAYCHAIN="kusama"
+
+ENV PARACHAIN_EXTRA_ARGS=""
+ENV RELAYCHAIN_EXTRA_ARGS=""
+
+EXPOSE 9615
+EXPOSE 9616
+EXPOSE 9933
+EXPOSE 9934
+EXPOSE 9944
+EXPOSE 9945
+EXPOSE 30333
+EXPOSE 30334
